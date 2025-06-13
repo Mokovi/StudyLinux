@@ -22,7 +22,7 @@
 
 1. **常用命令详解**
 
-   * 文件操作：`ls`, `cp`, `mv`, `rm`, `find`, `tree`
+   * 文件操作：`ls`, `cp`, `mv`, `rm`, `find`, `tree`,`cat`
    * 用户、组、权限管理：`useradd`, `groupadd`, `chmod`, `chown`, sudo 配置
    * 进程管理：`ps`, `top`, `htop`, `kill`, `jobs`, `bg`, `fg`
    * 网络命令：`ping`, `ss`, `netstat`, `curl`, `wget`

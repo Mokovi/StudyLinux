@@ -6,6 +6,8 @@
 - 模式切换：普通模式、插入模式、命令模式
 - 配置文件：`~/.vimrc`
 
+![](../resource/linux2.png)
+
 ### 常用操作
 ```bash
 # 启动Vim
@@ -34,6 +36,8 @@ ESC   # 返回普通模式
    - `:sp`：水平分屏
    - `:vsp`：垂直分屏
    - `Ctrl+w`：切换窗口
+
+![](../resource/Linux3.png)
 
 ## Emacs
 
