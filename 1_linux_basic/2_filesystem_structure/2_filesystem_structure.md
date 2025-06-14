@@ -105,3 +105,4 @@ chown user:group file
 ## 参考资料
 - Filesystem Hierarchy Standard: https://refspecs.linuxfoundation.org/FHS_3.0/fhs/index.html
 - Linux Documentation Project: https://tldp.org/ 
+- 菜鸟教程: https://www.runoob.com/linux/linux-system-contents.html
