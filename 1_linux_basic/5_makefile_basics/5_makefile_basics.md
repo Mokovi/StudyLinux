@@ -17,6 +17,8 @@ target: prerequisites
 - **target**: 构建目标（文件或伪目标）
 - **prerequisites**: 依赖文件/目标
 - **command**: 生成目标的命令（**必须用TAB缩进**）
+- make执行时，默认执行第一条规则
+- 在Makefile的规则中，命令必须以Tab开头，不能是空格。
 
 ### 1.2 基本使用
 **简单示例**

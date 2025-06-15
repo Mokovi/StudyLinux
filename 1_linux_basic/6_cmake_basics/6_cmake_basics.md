@@ -1,10 +1,11 @@
+# CMake
 以下是全面覆盖CMake基础到高级核心技术的系统化总结，结合最佳实践与项目级应用场景：
 
 ---
 
 ### 一、CMake核心概念与工作原理
 1. **跨平台构建流程**  
-   - **核心作用**：通过`CMakeLists.txt`配置文件生成平台特定的构建文件（如Makefile、Visual Studio工程）。  
+   - **核心作用**：通过`CMakeLists.txt`配置文件生成平台特定的构建文件
    - **工作流程**：  
      ```bash
      mkdir build && cd build  # 推荐Out-of-Source构建

@@ -196,8 +196,8 @@ gcc main.o utils.o -o program
 # 1. 编译为目标文件 .o
 gcc -c hello.c -o hello.o
 # 2. 使用 ar 工具创建静态库 .a
-ar rcs libhello.a hello.o 
-# ar：archive 工具   r：插入文件    c：创建库   s：索引（方便后续链接）
+ar rcs libhello.a hello.o  
+# ar：archive 工具   r：插入文件    c：创建库   s：索引（方便后续链接） r c s顺序随意
 # 库文件命名规范 lib+filename+.a lib为前缀 .a为后缀
 
 # 使用静态库
@@ -220,8 +220,15 @@ gcc -shared -fPIC utils.c -o libutils.so
 # 使用动态库  与静态库相同
 gcc main.c -L. -lutils -o program  
 
+# 那么问题来了 如果同时存在 动态库 与 静态库 上述代码会链接哪个？ 答案是动态库，默认寻找动态库，找不到才会去找静态库
+# 想使用静态库就直接指定
+gcc main.cpp ./libhello.a -o app
+
 # 设置rpath避免环境变量  
-gcc -Wl,-rpath='$ORIGIN/lib' -L./lib -lmylib ...  
+gcc -Wl,-rpath='$ORIGIN/lib' -L./lib -lmylib main.cpp -o app
+# -L./lib：告诉链接器去 ./lib 目录找 libmylib.so
+# -lmylib：链接 libmylib.so
+# -Wl,-rpath='$ORIGIN/lib'：-Wl,xxx：把参数传给链接器 ld; rpath：设置运行时搜索动态库的路径; $ORIGIN：表示程序自身所在目录
 ```  
 
 ### 动态库高级管理  
