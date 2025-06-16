@@ -1,4 +1,4 @@
-# Makefile 完全指南：从基础到企业级应用
+# Makefile 指南
 
 ## 第一部分：Makefile基础
 
@@ -17,7 +17,7 @@ target: prerequisites
 - **target**: 构建目标（文件或伪目标）
 - **prerequisites**: 依赖文件/目标
 - **command**: 生成目标的命令（**必须用TAB缩进**）
-- make执行时，默认执行第一条规则
+- make不带参数执行时，默认执行第一条规则
 - 在Makefile的规则中，命令必须以Tab开头，不能是空格。
 
 ### 1.2 基本使用
@@ -52,6 +52,7 @@ hello: hello.c
 | `$?` | 比目标新的依赖文件 | 用于条件更新 |
 
 ### 1.3 伪目标声明
+若存在名为clean的文件，执行make clean时，不会执行上述命令.
 ```makefile
 .PHONY: clean install all  # 声明伪目标，避免与同名文件冲突
 
@@ -72,7 +73,7 @@ TARGET = program
 all: $(TARGET)  # 默认目标
 
 $(TARGET): $(OBJS)
-    $(CC) $^ -o $@
+    $(CC) $^ -o $@  
 
 %.o: %.c
     $(CC) $(CFLAGS) -c $< -o $@
@@ -127,23 +128,75 @@ endif
 # 获取目录下所有.c文件
 SRCS := $(wildcard src/*.c)
 
-# 替换文件后缀
-OBJS := $(SRCS:src/%.c=build/%.o)
+# 替换文件后缀  
+OBJS := $(SRCS:src/%.c=build/%.o)   
 
 # 添加前缀
 INCLUDES := $(addprefix -I, include lib/include)
 
 # 过滤文件
-TEST_SRCS := $(filter %_test.c, $(SRCS))
+TEST_SRCS := $(filter %_test.c, $(SRCS)) #仅保留 %_test.c
+SRCS = $(filter-out src/t.cpp, $(wildcard src/*.cpp)) #去除src/t.cpp
+
 ```
 
 ### 3.3 包含其他Makefile
+#### 示例场景：
+
+```
+project/
+├── Makefile
+├── config.mk
+├── modules/
+│   ├── core.mk
+│   └── network.mk
+```
+
 ```makefile
 include config.mk  # 包含配置文件
 
 # 包含模块化Makefile
 include $(wildcard modules/*.mk)
 ```
+
+* 将其它 `.mk` 或 `.make` 文件中的规则和变量**引入当前 Makefile**。
+* 便于**配置拆分**和**模块化管理**。
+
+#### 📁 config.mk：
+
+```makefile
+CXX = g++
+CXXFLAGS = -O2 -Wall
+```
+
+#### 📁 modules/core.mk：
+
+```makefile
+core.o: src/core.cpp
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+```
+
+#### 📁 modules/network.mk：
+
+```makefile
+net.o: src/net.cpp
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+```
+
+#### 📁 Makefile：
+
+```makefile
+include config.mk
+include $(wildcard modules/*.mk)
+
+all: core.o net.o
+	$(CXX) $^ -o app
+
+clean:
+	rm -f *.o app
+```
+> 🔄 每个模块维护自己的构建规则，`Makefile` 只负责总调度。
+---
 
 ### 3.4 自动依赖生成（高级）
 ```makefile
@@ -158,6 +211,62 @@ $(DEPDIR):
 
 DEPFILES = $(SRCS:%.c=$(DEPDIR)/%.d)
 -include $(DEPFILES)
+```
+#### ✅ 关键变量说明：
+
+| 变量或参数        | 作用说明                          |
+| ------------ | ----------------------------- |
+| `-MMD`       | 自动生成 `.d` 文件，只包含用户头文件（不包含系统头） |
+| `-MP`        | 生成伪目标，避免头文件被删除时报错             |
+| `-MF file.d` | 指定 `.d` 文件输出路径                |
+| `-MT $@`     | 指定目标名（即 `.o` 文件）              |
+| `-include`   | 包含 `.d` 文件，头文件变动时触发重新编译       |
+
+
+#### ✅ 目的：
+
+> **自动生成依赖关系文件（`.d`）**，确保头文件变动时自动触发重新编译。
+
+---
+
+#### 🧠 背景知识：
+
+* 默认 Makefile 只能追踪 `.cpp` 或 `.c` 文件的变动。
+* 如果你改了 `#include "someheader.h"`，Makefile **不会自动重编**，会导致编译缺陷。
+
+---
+
+#### 🚀 自动依赖的工作机制：
+
+##### 第一步：编译时生成依赖文件 `.d`
+
+```bash
+gcc -MMD -MP -MF .deps/foo.d -c foo.c -o build/foo.o
+```
+
+生成 `.deps/foo.d`，内容大致如下：
+
+```makefile
+build/foo.o: foo.c foo.h common.h
+```
+
+#### 第二步：在 Makefile 中 `-include` 这些 `.d` 文件
+
+```makefile
+-include .deps/foo.d
+```
+> 每次编译前 Make 会自动加载依赖文件，知道哪些 `.h` 文件变动需要重新编译。
+---
+
+#### 📁 示例结构：
+
+```
+project/
+├── src/
+│   ├── main.c
+│   └── util.h
+├── .deps/
+│   └── main.d   ← 自动生成
 ```
 
 ### 3.5 构建模式管理
@@ -191,6 +300,11 @@ LIB_DIR = $(BUILD_DIR)/lib
 MODULES = core utils network
 include $(patsubst %,$(SRC_DIR)/%/module.mk,$(MODULES))
 ```
+$(patsubst PATTERN,REPLACEMENT,TEXT) 是 Make 的字符串替换函数，用来对 TEXT 中的单词（由空白分隔）做模式替换。
+- PATTERN：匹配模式，可以包含一个 % 通配符
+- REPLACEMENT：替换格式，也可以包含 %，表示用 PATTERN 中 % 所匹配的那部分
+- TEXT：要做替换的一系列单词列表
+最终结果等价于： include src/core/module.mk src/utils/module.mk src/network/module.mk
 
 ### 4.2 静态库构建
 ```makefile
@@ -199,7 +313,7 @@ LIB_SRC = $(wildcard src/utils/*.c)
 LIB_OBJ = $(LIB_SRC:.c=.o)
 
 $(LIB_DIR)/$(LIB_NAME): $(LIB_OBJ)
-    @mkdir -p $(@D)
+    @mkdir -p $(@D) #mkdir前的@:抑制命令回显,不会输出终端
     ar rcs $@ $^
     ranlib $@  # 创建索引
 ```
@@ -216,8 +330,8 @@ $(LIB_DIR)/$(SHLIB_NAME): $(SHLIB_SRC)
 ### 4.4 参数化构建
 ```makefile
 # 用户可配置选项
-PREFIX ?= /usr/local
-ARCH ?= $(shell uname -m)
+PREFIX ?= /usr/local #?= 表示“如果外部没有传入 PREFIX，就设为 /usr/local”。
+ARCH ?= $(shell uname -m)#系统命令 uname -m，返回当前机器架构（如 x86_64、armv7l 等），并赋给 ARCH。
 
 # 交叉编译支持
 ifeq ($(CROSS_COMPILE),arm-linux-gnueabihf-)
@@ -355,7 +469,7 @@ else
 endif
 
 #----- 文件自动发现 -----#
-SRCS     := $(shell find $(SRC_DIR) -name '*.c')
+SRCS     := $(shell find $(SRC_DIR) -name '*.c') # 使用shell 的 find 命令
 OBJS     := $(patsubst $(SRC_DIR)/%.c,$(OBJ_DIR)/%.o,$(SRCS))
 DEPFILES := $(OBJS:.o=.d)
 
