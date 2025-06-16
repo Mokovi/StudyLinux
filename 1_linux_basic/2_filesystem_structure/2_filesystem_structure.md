@@ -8,7 +8,7 @@
 
 ### 重要系统目录
 
-![](../../resource/Linux1.jpg)
+![](../resource/Linux1.jpg)
 
 #### /etc
 - **用途**：系统配置文件目录
