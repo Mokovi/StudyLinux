@@ -2,7 +2,7 @@
 
 本项目旨在系统、完整地学习Linux操作系统，内容涵盖基础命令、Shell编程、系统编程、网络编程等模块，适合希望深入理解和掌握Linux的学习者。
 
-## linxu基础
+## linux基础
 
 * **Linux 基础环境**
 
@@ -168,17 +168,6 @@
 
   * systemd 单元文件
   * CI/CD：Jenkins / GitLab CI
-
-## 容器与虚拟化
-
-* **容器技术**
-  * Docker 基础：镜像、容器、网络、存储
-  * Kubernetes 入门：Pod、Service、Deployment
-  * 容器编排与微服务架构
-
-* **虚拟化**
-  * KVM/QEMU 基础
-  * 虚拟机管理：virt-manager、libvirt
 
 ## 安全与性能调优
 
