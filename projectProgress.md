@@ -38,10 +38,9 @@
 - 详细列出了各个章节的完成情况
 - 添加了进度百分比和状态说明
 
-
-### 修改5 2025.06.19.14:05
-- 增加第三章系统编程相关内容
-  - 系统调用
-  - 文件IO以及进程管理
+### 修改6 Revision #6
+- 合并了Linux_progress.md与3_system_code/2_file_IO_processCtl/2_file_IO_processCtl.md
+- 对进程控制、进程号、fork/vfork/exec/wait/waitpid/exit、内存布局、system、atexit等内容进行了去重和融合
+- 保留了更详细的理论、重要示例和结构，完善了进程控制相关章节
 
 

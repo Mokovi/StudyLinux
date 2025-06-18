@@ -28,21 +28,26 @@
    * [零拷贝 I/O 基本概念](#1-零拷贝-io-基本概念)
    * [函数 `sendfile`](#2-函数-sendfile)
    * [函数 `splice`](#3-函数-splice)
-5. [进程的概述](#五进程的概述)
-5. [进程创建与执行](#六进程创建与执行)
-   * [进程概述] 
+5. [进程的概述与进程号](#五进程的概述与进程号)
+   * [进程的定义与状态](#1-进程的定义与状态)
+   * [进程号与相关函数](#2-进程号与相关函数)
+   * [进程的内存布局](#3-进程的内存布局)
+6. [进程创建与执行](#六进程创建与执行)
    * [进程创建与执行的基本概念](#1-进程创建与执行的基本概念)
    * [函数 `fork`](#2-函数-fork)
    * [函数 `vfork`](#3-函数-vfork)
-   * [函数 `execve`](#4-函数-execve)
-   * [函数 `waitpid`](#5-函数-waitpid)
-   * [函数 `exit`](#6-函数-exit)
-6. [进程属性](#七进程属性)
+   * [函数 `exec` 系列](#4-函数-exec-系列)
+   * [函数 `wait` / `waitpid`](#5-函数-wait-waitpid)
+   * [函数 `exit` / `_exit`](#6-函数-exit-_exit)
+   * [system 函数](#7-system-函数)
+   * [进程终止清理 atexit](#8-进程终止清理-atexit)
+   * [僵尸进程与孤儿进程](#9-僵尸进程与孤儿进程)
+7. [进程属性](#七进程属性)
 
    * [进程属性的基本概念](#1-进程属性的基本概念)
    * [函数 `setuid` / `setgid`](#2-函数-setuid-setgid)
    * [函数 `nice` / `setpriority`](#3-函数-nice-setpriority)
-7. [综合实例](#八综合实例)
+8. [综合实例](#八综合实例)
 
 ---
 
@@ -630,9 +635,9 @@ int main() {
 
 ---
 
-## 五、进程的概述
+## 五、进程的概述与进程号
 
-### 进程的定义
+### 1. 进程的定义与状态
 
 **1.程序和进程的区别：** 
 
@@ -666,222 +671,61 @@ int main() {
 
 ​	**就绪态—→运行态**：CPU 空闲时选择一个就绪进程
 
-### **进程的调度进制：** 
-
-​	多进程不是说一个进程执行完再执行另一个进程，而是交替执行的，一个进程执行一段时间，然后下一个进程在执行一段时间，依次类推，所有进程执行完之后再回到第一个进程继续执行由此类推。在操作系统中，时间片轮转调度（Round Robin Scheduling）、优先级调度（Priority Scheduling）和完全公平调度（Completely Fair Scheduling，CFS）是三种常见的进程调度算法。
-
-#### **时间片轮转调度（Round Robin Scheduling）**
-
-**概述**：  
-	时间片轮转调度是一种简单且常用的调度策略，特别适用于多任务环境中的时间共享系统。该策略的核心思想是为每个进程分配一个固定的时间片（Time Slice），当一个进程用完它的时间片后，操作系统会将其挂起，将CPU资源分配给下一个进程。所有的进程按顺序轮流执行，保证每个进程都能获得一定的CPU时间。
-
-**工作原理**：
-
-- 每个进程按照固定的时间片执行，当时间片耗尽时，调度器会将进程切换出去，并将其状态保存，再选择下一个进程执行。
-- 如果进程在其时间片内完成了任务，则该进程会被移除调度队列，继续执行下一个任务。
-- 如果进程没有在时间片内完成，调度器会将其放回队列末尾，等待下次调度。
-
-**优点**：
-
-- 简单易实现，适用于多任务操作系统。
-- 每个进程都可以得到公平的CPU时间。
-- 特别适用于交互式任务，避免某些进程独占CPU时间。
-
-**缺点**：
-
-- 如果时间片设置得太小，频繁的上下文切换会增加开销。
-- 不考虑进程的优先级，可能导致重要的进程在轮转时被延迟。
-- 时间片的选择要合适，过大或过小都会影响系统性能。
-
-**应用场景**：  
-适用于一般的桌面操作系统和基于时间共享的系统，如Linux和Windows中的用户进程调度。
-
-#### **优先级调度（Priority Scheduling）**
-
-**概述**：  
-优先级调度是一种基于优先级的调度算法。每个进程都被分配一个优先级值，调度器总是选择优先级最高的进程来执行。高优先级进程会优先于低优先级进程执行，直到它完成或者被阻塞为止。优先级可以是静态的（在进程创建时确定），也可以是动态的（在运行过程中根据进程的行为或外部因素调整）。
-
-**工作原理**：
-
-- 每个进程有一个优先级，优先级可以由系统静态设定，或由用户和操作系统动态调整。
-- 调度器选择队列中优先级最高的进程执行，如果多个进程优先级相同，则采用其他算法（如时间片轮转）来调度。
-- 优先级调度可以是抢占式的，即当一个高优先级进程到达时，会抢占正在运行的低优先级进程；也可以是非抢占式的，即进程执行完一个时间片后才会进行调度。
-
-**优点**：
-
-- 可以确保高优先级的进程能及时得到执行，适合有不同重要性的任务。
-- 对于实时任务或需要快速响应的进程非常有用。
-
-**缺点**：
-
-- **饥饿问题（Starvation）**：低优先级的进程可能长时间得不到执行，特别是在高优先级进程一直占用CPU时。
-- 不适用于所有任务，因为它忽视了进程的执行时间和公平性。
-- 动态优先级调整可能增加系统的复杂性。
-
-**应用场景**：
-
-- 适用于实时操作系统或任务需要严格响应时间的系统。
-- 比如嵌入式系统中的任务调度和硬实时系统。
-
-#### **完全公平调度（CFS，Completely Fair Scheduling）**
-
-**概述**：  
-完全公平调度（CFS）是Linux操作系统默认的调度算法，旨在为每个进程提供一个“公平”的CPU时间。与时间片轮转调度不同，CFS不使用固定的时间片，而是使用进程的“虚拟运行时间”（`virtual runtime`，简称`vruntime`）来决定哪个进程应该运行。CFS的目标是让每个进程尽可能公平地获得CPU时间，而不是通过固定的时间片来分配资源。
-
-**工作原理**：
-
-- 每个进程都有一个`vruntime`值，表示该进程消耗的CPU时间。当一个进程运行时，它的`vruntime`会增加。
-- CFS通过一个红黑树（Red-Black Tree）来管理可执行的进程，树的根节点是`vruntime`最小的进程，这意味着它会被优先执行。
-- 进程的`vruntime`会根据其实际运行时间动态调整，长时间运行的进程会让出CPU，短时间运行的进程会被优先调度。
-- CFS没有固定的时间片，而是基于进程的`vruntime`来决定调度顺序，进程越公平，`vruntime`的增加就越慢，调度时得到的CPU时间就越多。
-
-**优点**：
-
-- **公平性**：CFS最大程度地保证了进程之间的公平性，每个进程根据其CPU消耗时间来动态调整调度顺序。
-- **灵活性**：相比时间片轮转调度，CFS具有更高的灵活性，可以动态调整每个进程的CPU时间分配，避免了不必要的频繁上下文切换。
-- **低延迟**：对交互式进程提供较低的调度延迟，因为它总是优先调度`vruntime`较小的进程。
-
-**缺点**：
-
-- 复杂性较高，调度机制依赖于红黑树的实现，可能会增加系统的开销。
-- 对于一些实时应用来说，CFS可能不能提供足够的响应保证，因为它更注重公平性而非严格的实时性。
-
-**应用场景**：
-
-- 适用于需要平衡性能和公平性的多任务操作系统，如Linux。CFS是Linux的默认调度算法，适合各种通用计算任务。
-- 不适用于实时性要求较高的任务。
-
-##### CFS实例
-
-​	为了更好地说明 **完全公平调度（CFS）** 的工作原理，我们可以通过一个更完善的例子来展示进程如何基于 `vruntime` 值进行调度，并解释不同优先级的进程如何影响 `vruntime` 的增长速率。
-
-假设场景：
-
-- 系统中有三个进程：`进程 A`、`进程 B` 和 `进程 C`。
-- 进程 A 是高优先级进程，`权重 = 1024`。
-- 进程 B 是中等优先级进程，`权重 = 512`。
-- 进程 C 是低优先级进程，`权重 = 256`。
-
-所有进程的初始 `vruntime` 为 0。
-
-在此例中，我们假设每个进程的 **执行时间** 都为 5 毫秒。
-
-步骤 1：进程 A 执行
-
-- 初始时，`进程 A` 的 `vruntime = 0`，`进程 B` 和 `进程 C` 的 `vruntime = 0`。
-
-- CFS 会选择 `进程 A` 执行，因为它的 `vruntime` 最小。
-
-- 进程 A 执行了 5 毫秒。由于 `进程 A` 的权重为 1024，它的 `vruntime` 增加的速率较慢。假设 `vruntime` 增加的计算公式是：
-
-  ```
-  vruntime 增加量 = 执行时间 × 权重因子 / 权重
-  ```
-
-  假设权重因子为 1，进程 A 的 `vruntime` 增加量是：
-
-  ```
-  vruntime_A = 5 × 1 / 1024 ≈ 0.00488
-  ```
-
-  进程 A 执行完后，`vruntime_A` 的新值为：
-
-  ```
-  vruntime_A = 0 + 0.00488 = 0.00488
-  ```
-
-  所以，`进程 A` 执行完后的 `vruntime = 0.00488`。
-
-步骤 2：进程 C 执行
-
-- 当前时刻，`进程 A` 的 `vruntime = 0.00488`，`进程 B` 的 `vruntime = 0`，`进程 C` 的 `vruntime = 0`。
-
-- CFS 会选择 `进程 C` 执行，因为它的 `vruntime` 最小（与进程 B 相同，选择顺序可能不同，但我们假设先执行 C）。
-
-- 进程 C 执行了 5 毫秒。由于 `进程 C` 的权重为 256，它的 `vruntime` 增加量会比进程 A 大。计算过程如下：
-
-  ```
-  vruntime_C = 5 × 1 / 256 ≈ 0.01953
-  ```
-
-  进程 C 执行完后的 `vruntime` 为：
-
-  ```
-  vruntime_C = 0 + 0.01953 = 0.01953
-  ```
-
-  所以，`进程 C` 执行完后的 `vruntime = 0.01953`。
-
-步骤 3：进程 B 执行
-
-- 当前时刻，`进程 A` 的 `vruntime = 0.00488`，`进程 B` 的 `vruntime = 0`，`进程 C` 的 `vruntime = 0.01953`。
-
-- CFS 会选择 `进程 B` 执行，因为它的 `vruntime` 最小。
-
-- 进程 B 执行了 5 毫秒。由于 `进程 B` 的权重为 512，它的 `vruntime` 增加量比进程 A 小，但比进程 C 大。计算过程如下：
-
-  ```
-  vruntime_B = 5 × 1 / 512 ≈ 0.00977
-  ```
-
-  进程 B 执行完后的 `vruntime` 为：
-
-  ```
-  vruntime_B = 0 + 0.00977 = 0.00977
-  ```
-
-  所以，`进程 B` 执行完后的 `vruntime = 0.00977`。
-
-步骤 4：再次调度
-
-此时，进程 A、B 和 C 的 `vruntime` 分别为：
-
-- `进程 A`：`vruntime = 0.00488`
-- `进程 B`：`vruntime = 0.00977`
-- `进程 C`：`vruntime = 0.01953`
-
-接下来，CFS 会选择 **`vruntime` 最小的进程** 来执行，这个进程是 `进程 A`，它的 `vruntime` 最小。然后调度会继续按照这种方式进行，直到所有进程完成执行。
-
-**总结**：
-
-1. **权重（优先级）决定了 `vruntime` 的增长速率**：
-   - 高优先级的进程（权重大）其 `vruntime` 增长较慢，因此可以更长时间占用 CPU。
-   - 低优先级的进程（权小）其 `vruntime` 增长较快，因此调度时优先级较低。
-
-2. **进程调度顺序是基于 `vruntime` 的**，`vruntime` 越小的进程越容易被调度执行，CFS 会按照进程的 `vruntime` 值维护一个红黑树（基于红黑树来管理所有可执行的进程）。
-
-3. **公平性**：CFS 会确保所有进程在理论上能够获得相同的 CPU 时间，通过动态调整 `vruntime`，使得长期运行的进程逐渐让出 CPU 给其他进程。
-
-这种调度方式与传统的基于时间片的调度算法（如时间片轮转）不同，它根据每个进程的实际执行情况来调整调度策略，确保了调度的公平性。
-
-### **进程控制块**
-
-​	**进程控制块**就是用于保存一个进程信息的结构体，又称之为**PCB**。OS是根据PCB来对并发执行的进程进行控制和管理的。系统在创建一个进程的时候会开辟 一段内存空间存放与此进程相关的PCB数据结构。 PCB是操作系统中最重要的记录型数据结构。PCB中记录了用于描述进程进展情况及控制进程运行所需的全部信息。 
-
-​	PCB是进程存在的唯一标志，在Linux中PCB存放在task_struct结构体中。
-
-``` bash
-/usr/src
-$ sudo apt-get install ctags
-sudo ctags -R
-
-查看结构体  vim -t task_struct
+### 2. 进程号与相关函数
+
+Linux 操作系统提供了三个获得进程号的函数 getpid()、getppid()、getpgid()
+
+```c
+#include <sys/types.h>
+#include <unistd.h>
+pid_t getpid(void);    // 获取当前进程的进程号
+pid_t getppid(void);   // 获取当前进程的父进程号
+pid_t getpgid(pid_t pid); // 获取指定进程的进程组号
 ```
 
-​	调度数据 (进程的状态,标记优先级,调度策略等)
+**示例代码：**
 
-​	时间数据: 创建该进程的时间,在用户态的运行时间,在内核态的运行时间.
+```c
+#include <stdio.h>
+#include <sys/types.h>
+#include <unistd.h>
 
-​	文件数据： 文件描述符表,内存数据,进程标识(进程号)
+int main() {
+    printf("pid = %d\n", getpid());
+    printf("ppid = %d\n", getppid());
+    printf("pgid = %d\n", getpgid(getpid()));
+    while(1);
+    return 0;
+}
+```
+
+---
+
+### 3. 进程的内存布局
+
+在程序运行时，内存被分为不同的区域，用来存储代码、数据、堆栈等内容。
+
+1. **栈区（Stack）**：用于存储局部变量、函数参数和返回地址，由系统自动分配和释放。
+2. **堆区（Heap）**：用于动态分配内存，由程序员手动分配和释放。
+3. **BSS 区**：存放未初始化的全局变量和静态变量，程序加载时自动清零。
+4. **数据区**：存放已初始化的全局变量和静态变量。
+5. **代码区（Text）**：存储程序的机器指令，只读。
+
+**内存布局示意：**
+
+- 高地址
+    - 栈区
+    - 堆区
+    - BSS 区
+    - 数据区
+    - 代码区
+- 低地址
 
 ## 六、进程创建与执行
 
 ### 1. 进程创建与执行的基本概念
 
-进程创建和执行是操作系统的核心功能。`fork` 创建子进程，`execve` 执行新程序，`waitpid` 等待子进程结束，\`
-
-
-exit\` 退出当前进程。通过这些函数，程序可以并发执行任务，提高效率。
+每个进程都由一个进程号（pid_t）标识。进程的创建和执行是操作系统的核心功能。常用函数有 fork、vfork、exec、wait、waitpid、exit。
 
 ---
 
@@ -890,37 +734,71 @@ exit\` 退出当前进程。通过这些函数，程序可以并发执行任务�
 #### 语法
 
 ```c
+#include <sys/types.h>
 #include <unistd.h>
-
 pid_t fork(void);
 ```
 
-#### 参数说明
+#### 返回值
+- 父进程中返回子进程的进程号（>0）
+- 子进程中返回0
+- 失败返回-1
 
-* 无。
+#### 说明
+- fork 创建一个新的子进程，子进程是父进程的副本。
+- 父子进程拥有独立的地址空间，但初始内容相同（写时拷贝）。
 
-#### 使用场景
-
-`fork` 用于创建一个新的进程，新进程是父进程的副本。
-
-#### 示例代码
+#### 重要示例：区分父子进程
 
 ```c
-#include <unistd.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <unistd.h>
+int main(){
+    pid_t pid;
+    printf(" [%d]:Begin!\n",getpid());
+    pid = fork();
+    if(pid < 0){
+        perror("fork 创建进程错误!");
+        exit(1);
+    }
+    if(pid == 0){
+        printf(" [%d]:子进程正在工作...\n",getpid());
+    }else{
+        sleep(1);
+        printf(" [%d]:父进程正在工作...\n",getpid());
+    }
+    printf("[%d] End!\n", getpid());
+    exit(0);
+}
+```
 
+#### 重要示例：父子进程独立地址空间
+
+```c
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+int x = 10;
 int main() {
+    static int y = 10;
+    int z = 10;
     pid_t pid = fork();
-    if (pid == -1) {
-        perror("fork failed");
-        return 1;
+    if (pid < 0) {
+        perror("创建进程失败");
+        return -1;
     }
-
-    if (pid == 0) {
-        printf("Child process\n");
+    if (pid > 0) {
+        printf("父进程....\n");
+        x++; y++; z++;
+        printf("x =%d, y =%d, z =%d\n", x, y, z);
     } else {
-        printf("Parent process\n");
+        sleep(1);
+        printf("子进程...\n");
+        printf("x =%d, y =%d, z =%d\n", x, y, z);
     }
+    while (1);
     return 0;
 }
 ```
@@ -932,76 +810,225 @@ int main() {
 #### 语法
 
 ```c
+#include <sys/types.h>
 #include <unistd.h>
-
 pid_t vfork(void);
 ```
 
-#### 参数说明
+#### 说明
+- vfork 创建子进程，但父子进程共享地址空间，直到子进程调用 exec 或 exit。
+- vfork 后父进程会被挂起，直到子进程退出。
 
-* 无。
+#### 重要示例
 
-#### 使用场景
-
-`vfork` 用于创建一个新的进程，但是在子进程执行之前，父进程会被暂时挂起，适用于创建新进程后立即执行新程序的场景。
+```c
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <unistd.h>
+int x=100;
+int main(){
+    static int y=200;
+    int z=300;
+    pid_t pid = vfork();
+    if(pid<0){
+        perror("创建进程失败!");
+        return -1;
+    }
+    if(pid>0){
+        printf("父进程正在运行中...\n");
+        printf("x==%d,y==%d,z==%d\n",x,y,z);
+    }else{
+        printf("子进程正在运行中...\n");
+        x++; y++; z++;
+        printf("x==%d,y==%d,z==%d\n",x,y,z);
+        exit(0);
+    }
+    while(1);
+    return 0;
+}
+```
 
 ---
 
-### 4. 函数 `execve`
+### 4. 函数 `exec` 系列
 
 #### 语法
 
 ```c
 #include <unistd.h>
-
-int execve(const char *pathname, char *const argv[], char *const envp[]);
+int execl(const char *path, const char *arg, ...);
+int execlp(const char *file, const char *arg, ...);
+int execv(const char *path, char *const argv[]);
+int execvp(const char *file, char *const argv[]);
+int execle(const char *path, const char *arg, ..., char * const envp[] );
+int execvpe(const char *file, char *const argv[], char *const envp[]);
 ```
 
-#### 参数说明
+#### 说明
+- exec 系列函数用新程序替换当前进程映像，不会返回（除非出错）。
+- execl/execv 需要绝对路径，带 p 的可用相对路径。
+- e 变体可自定义环境变量。
 
-* `pathname`：要执行的程序路径。
-* `argv`：传递给新程序的参数。
-* `envp`：传递给新程序的环境变量。
+#### 重要示例
 
-#### 使用场景
-
-`execve` 用于加载并执行一个新的程序，替换当前进程映像。
+```c
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+int main() {
+    pid_t pid = fork();
+    if(pid < 0) {
+        perror("fail to fork");
+        exit(1);
+    } else if(pid > 0) {
+        printf("父进程在运行中\n");
+        wait(NULL);
+        printf("子进程运行结束\n");
+    } else {
+        printf("子进程运行中\n");
+        if(execl("/bin/ls", "ls", "-l", NULL) == -1) {
+            perror("fail to execl");
+            exit(1);
+        }
+    }
+    return 0;
+}
+```
 
 ---
 
-### 5. 函数 `waitpid`
+### 5. 函数 `wait` / `waitpid`
 
 #### 语法
 
 ```c
+#include <sys/types.h>
 #include <sys/wait.h>
-
+pid_t wait(int *status);
 pid_t waitpid(pid_t pid, int *status, int options);
 ```
 
-#### 参数说明
+#### 说明
+- wait 等待任一子进程结束，waitpid 可指定等待的子进程。
+- status 可获取子进程退出状态。
 
-* `pid`：要等待的进程 ID。
-* `status`：存储子进程的状态。
-* `options`：等待选项，通常为 `0`。
+#### 重要示例
+
+```c
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+int main() {
+    pid_t pid = fork();
+    if(pid < 0) {
+        perror("进程创建失败");
+        return -1;
+    }
+    if(pid == 0) {
+        for(int i = 0; i < 3; i++) {
+            printf("子进程\n");
+            sleep(1);
+        }
+        exit(3);
+    } else {
+        int status = 0;
+        wait(&status);
+        if(WIFEXITED(status) != 0) {
+            printf("子进程返回状态: %d\n", WEXITSTATUS(status));
+        }
+        printf("父进程\n");
+    }
+    return 0;
+}
+```
 
 ---
 
-### 6. 函数 `exit`
+### 6. 函数 `exit` / `_exit`
 
 #### 语法
 
 ```c
 #include <stdlib.h>
-
 void exit(int status);
+#include <unistd.h>
+void _exit(int status);
 ```
 
-#### 参数说明
-
-* `status`：进程的退出状态。
+#### 说明
+- exit 会刷新缓冲区，_exit 不会。
+- 一般推荐用 exit。
 
 ---
+
+### 7. system 函数
+
+#### 语法
+
+```c
+#include <stdlib.h>
+int system(const char *command);
+```
+
+#### 说明
+- system 用于执行 shell 命令，会创建子进程并等待其结束。
+
+#### 重要示例
+
+```c
+#include <stdio.h>
+#include <stdlib.h>
+int main() {
+    system("clear");
+    system("ls -l");
+    return 0;
+}
+```
+
+---
+
+### 8. 进程终止清理 atexit
+
+#### 语法
+
+```c
+#include <stdlib.h>
+int atexit(void (*function)(void));
+```
+
+#### 说明
+- atexit 注册的函数会在进程正常结束前被调用。
+
+#### 重要示例
+
+```c
+#include <stdio.h>
+#include <stdlib.h>
+void fun1(){ printf("clear fun1...\n"); }
+void fun2(){ printf("clear fun2...\n"); }
+void fun3(){ printf("clear fun3...\n"); }
+int main(){
+    atexit(fun1);
+    atexit(fun2);
+    atexit(fun3);
+    printf(" **** **** **** *****\n ");
+    sleep(3);
+    return 0;
+}
+```
+
+---
+
+### 9. 僵尸进程与孤儿进程
+
+- **僵尸进程**：进程已经结束, 但进程的占用的资源未被回收, 这样的进程称为僵尸进程。父进程未调用 wait 或 waitpid 函数回收子进程的资源使子进程变为僵尸进程。
+- **孤儿进程**: 父进程运行结束, 但子进程未运行结束的子进程。
+- **守护进程**: 守护进程是个特殊的孤儿进程, 这种进程脱离终端, 在后台运行。
 
 ## 七、进程属性
 
