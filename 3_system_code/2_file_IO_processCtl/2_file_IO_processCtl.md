@@ -5,7 +5,6 @@
 ## 目录
 
 1. [文件 I/O 基本操作：打开、读写与定位](#一文件-io-基本操作-打开读写与定位)
-
    * [文件 I/O 基本概念](#1-文件-io-基本概念)
    * [函数 `open`](#2-函数-open)
    * [函数 `read`](#3-函数-read)
@@ -13,18 +12,15 @@
    * [函数 `lseek`](#5-函数-lseek)
    * [函数 `close`](#6-函数-close)
 2. [文件锁](#二文件锁)
-
    * [文件锁的基本概念](#1-文件锁的基本概念)
    * [函数 `fcntl`](#2-函数-fcntl)
    * [函数 `flock`](#3-函数-flock)
 3. [异步 I/O](#三异步-io)
-
    * [异步 I/O 基本概念](#1-异步-io-基本概念)
    * [函数 `aio_read`](#2-函数-aio_read)
    * [函数 `aio_write`](#3-函数-aio_write)
    * [函数 `io_submit` / `io_getevents`](#4-函数-io_submit-io_getevents)
 4. [零拷贝 I/O](#四零拷贝-io)
-
    * [零拷贝 I/O 基本概念](#1-零拷贝-io-基本概念)
    * [函数 `sendfile`](#2-函数-sendfile)
    * [函数 `splice`](#3-函数-splice)
@@ -43,7 +39,6 @@
    * [进程终止清理 atexit](#8-进程终止清理-atexit)
    * [僵尸进程与孤儿进程](#9-僵尸进程与孤儿进程)
 7. [进程属性](#七进程属性)
-
    * [进程属性的基本概念](#1-进程属性的基本概念)
    * [函数 `setuid` / `setgid`](#2-函数-setuid-setgid)
    * [函数 `nice` / `setpriority`](#3-函数-nice-setpriority)
@@ -75,13 +70,13 @@ int open(const char *pathname, int flags, mode_t mode);
 
 * `pathname`：要打开的文件路径。
 * `flags`：文件打开模式标志，常见的有：
-
   * `O_RDONLY`：只读模式。
   * `O_WRONLY`：只写模式。
   * `O_RDWR`：读写模式。
   * `O_CREAT`：如果文件不存在，则创建文件。
   * `O_EXCL`：如果文件已经存在，`open` 调用失败。
 * `mode`：文件权限，通常使用 `S_IRUSR`, `S_IWUSR` 等标志。
+* **返回值**：成功返回文件描述符，失败返回 -1 并设置 `errno`。
 
 #### 使用场景
 
@@ -124,6 +119,7 @@ ssize_t read(int fd, void *buf, size_t count);
 * `fd`：文件描述符，通常通过 `open` 函数获得。
 * `buf`：数据缓冲区，用于存储读取的数据。
 * `count`：要读取的字节数。
+* **返回值**：成功返回实际读取的字节数，失败返回 -1 并设置 `errno`。
 
 #### 使用场景
 
@@ -175,6 +171,7 @@ ssize_t write(int fd, const void *buf, size_t count);
 * `fd`：文件描述符。
 * `buf`：要写入的数据缓冲区。
 * `count`：要写入的字节数。
+* **返回值**：成功返回实际写入的字节数，失败返回 -1 并设置 `errno`。
 
 #### 使用场景
 
@@ -186,6 +183,7 @@ ssize_t write(int fd, const void *buf, size_t count);
 #include <fcntl.h>
 #include <unistd.h>
 #include <stdio.h>
+#include <string.h>
 
 int main() {
     int fd = open("example.txt", O_WRONLY | O_CREAT, 0644);
@@ -225,10 +223,10 @@ off_t lseek(int fd, off_t offset, int whence);
 * `fd`：文件描述符。
 * `offset`：偏移量，表示从某个位置的字节数。
 * `whence`：起始位置，有以下几种：
-
   * `SEEK_SET`：从文件开头。
   * `SEEK_CUR`：从当前位置。
   * `SEEK_END`：从文件末尾。
+* **返回值**：成功返回新的文件偏移量，失败返回 -1 并设置 `errno`。
 
 #### 使用场景
 
@@ -277,6 +275,7 @@ int close(int fd);
 #### 参数说明
 
 * `fd`：文件描述符。
+* **返回值**：成功返回 0，失败返回 -1 并设置 `errno`。
 
 #### 使用场景
 
@@ -334,6 +333,7 @@ int fcntl(int fd, int cmd, ...);
 
 * `fd`：文件描述符。
 * `cmd`：控制命令，如 `F_SETLK`, `F_SETLKW`。
+* **返回值**：成功返回 0，失败返回 -1 并设置 `errno`。
 
 #### 使用场景
 
@@ -389,6 +389,7 @@ int flock(int fd, int operation);
 
 * `fd`：文件描述符。
 * `operation`：锁操作，常见的有 `LOCK_SH`, `LOCK_EX`, `LOCK_UN`。
+* **返回值**：成功返回 0，失败返回 -1 并设置 `errno`。
 
 #### 使用场景
 
@@ -400,6 +401,7 @@ int flock(int fd, int operation);
 #include <fcntl.h>
 #include <unistd.h>
 #include <stdio.h>
+#include <sys/file.h>
 
 int main() {
     int fd = open("example.txt", O_WRONLY);
@@ -448,6 +450,7 @@ int aio_read(struct aiocb *aiocb);
 #### 参数说明
 
 * `aiocb`：包含 I/O 操作的相关信息，包括文件描述符、缓冲区、字节数等。
+* **返回值**：成功返回 0，失败返回 -1 并设置 `errno`。
 
 #### 使用场景
 
@@ -459,6 +462,7 @@ int aio_read(struct aiocb *aiocb);
 #include <aio.h>
 #include <unistd.h>
 #include <stdio.h>
+#include <fcntl.h>
 
 int main() {
     struct aiocb cb;
@@ -493,6 +497,7 @@ int aio_write(struct aiocb *aiocb);
 #### 参数说明
 
 * `aiocb`：包含 I/O 操作的相关信息。
+* **返回值**：成功返回 0，失败返回 -1 并设置 `errno`。
 
 #### 使用场景
 
@@ -504,6 +509,7 @@ int aio_write(struct aiocb *aiocb);
 #include <aio.h>
 #include <unistd.h>
 #include <stdio.h>
+#include <fcntl.h>
 
 int main() {
     struct aiocb cb;
@@ -540,6 +546,7 @@ int io_getevents(io_context_t ctx, long min, long nr, struct io_event *events, s
 
 * `ctx`：I/O 上下文。
 * `nr`：提交的 I/O 操作数量。
+* **返回值**：成功返回提交的操作数量，失败返回 -1 并设置 `errno`。
 
 #### 使用场景
 
@@ -571,6 +578,7 @@ ssize_t sendfile(int out_fd, int in_fd, off_t *offset, size_t count);
 * `in_fd`：输入文件描述符。
 * `offset`：文件的偏移量。
 * `count`：要传输的字节数。
+* **返回值**：成功返回传输的字节数，失败返回 -1 并设置 `errno`。
 
 #### 使用场景
 
@@ -612,6 +620,7 @@ int splice(int fd_in, off_t *off_in, int fd_out, off_t *off_out, size_t len, uns
 * `fd_in`：输入文件描述符。
 * `fd_out`：输出文件描述符。
 * `len`：要传输的字节数。
+* **返回值**：成功返回传输的字节数，失败返回 -1 并设置 `errno`。
 
 #### 使用场景
 
@@ -639,51 +648,66 @@ int main() {
 
 ### 1. 进程的定义与状态
 
-**1.程序和进程的区别：** 
+**程序与进程的区别：**
 
-​	**程序：是静态的，存放在磁盘上的可执行文件** 
+* **程序**：是静态的，存放在磁盘上的可执行文件。
+* **进程**：是动态的，是运行在内存中的程序的执行实例。
 
-​	**进程：是动态的，是运行在内存中的程序的执行实例**
+程序是一些指令的有序集合，而进程是程序执行的过程，进程是程序的一次执行过程。进程的状态是变化的，其包括进程的创建、调度和消亡。当程序运行时，其就是进程，程序每运行一次，就会创建一个进程。在 Linux 系统中，进程是管理事务的基本单元。进程拥有自己独立的处理环境和系统资源（处理器、存储器、I/O设备、数据、程序）。
 
-​	程序是一些指令的有序集合，而进程是程序执行的过程，进程是程序的一次执行过程。 进程的状态是变化的，其包括进程的创建、调度和消亡。 当程序运行时，其就是进程，程序每运行一次，就会创建一个进程。在linux系统中，进程是管理事务的基本单元。 进程拥有自己独立的处理环境和系统资源（处理器、存储器、I/O设备、数据、程序）。
+**进程的状态及转换：**
 
-**2.进程的状态及转换**
+进程整个生命周期可以简单划分为**三种状态**：
 
-进程整个生命周期可以简单划分为**三种状态**： 
+* **就绪态**：进程已经具备执行的一切条件，正在等待分配CPU的处理时间。
+* **执行态**：该进程正在占用CPU运行。
+* **等待态**：进程因不具备某些执行条件而暂时无法继续执行的状态。
 
-​	**就绪态：** 进程已经具备执行的一切条件，正在等待分配CPU的处理时间。 
-
-​	**执行态：** 该进程正在占用CPU运行。 
-
-​	**等待态：** 进程因不具备某些执行条件而暂时无法继续执行的状态。
-
-**进程三个状态的转换关系**
-
-![](../resource/1.png)
+**进程三个状态的转换关系：**
 
 引起进程状态转换的具体原因如下：
 
-​	**运行态→等待态**：等待使用资源；如等待外设传输；等待人工干预。
+* **运行态→等待态**：等待使用资源；如等待外设传输；等待人工干预。
+* **等待态→就绪态**：资源得到满足；如外设传输结束；人工干预完成。
+* **运行态→就绪态**：运行时间片到；出现有更高优先权进程。
+* **就绪态→运行态**：CPU 空闲时选择一个就绪进程。
 
-​	**等待态→就绪态**：资源得到满足；如外设传输结束；人工干预完成。
+**特殊的进程号：**
 
-​	**运行态→就绪态**：运行时间片到；出现有更高优先权进程。
+在 Linux 系统中进程号由 0 开始。进程号为 0 及 1 的进程由内核创建：
 
-​	**就绪态—→运行态**：CPU 空闲时选择一个就绪进程
+* 进程号为 0 的进程通常是调度进程，常被称为交换进程(swapper)。
+* 进程号为 1 的进程通常是 init 进程，init 进程是所有进程的祖先。除调度进程外，在 Linux 下面所有的进程都由进程 init 进程直接或者间接创建。
+
+**进程号(PID)**：标识进程的一个非负整型数。
+**父进程号(PPID)**：任何进程(除 init 进程)都是由另一个进程创建，该进程称为被创建进程的父进程，对应的进程号称为父进程号(PPID)。
+**进程组号(PGID)**：进程组是一个或多个进程的集合。他们之间相互关联，进程组可以接收同一终端的各种信号，关联的进程有一个进程组号(PGID)。
+
+---
 
 ### 2. 进程号与相关函数
 
-Linux 操作系统提供了三个获得进程号的函数 getpid()、getppid()、getpgid()
+#### 语法
 
 ```c
 #include <sys/types.h>
 #include <unistd.h>
+
 pid_t getpid(void);    // 获取当前进程的进程号
 pid_t getppid(void);   // 获取当前进程的父进程号
 pid_t getpgid(pid_t pid); // 获取指定进程的进程组号
 ```
 
-**示例代码：**
+#### 参数说明
+
+* `pid`：指定进程的进程号（仅 `getpgid` 函数）。
+* **返回值**：成功返回相应的进程号，失败返回 -1 并设置 `errno`。
+
+#### 使用场景
+
+这些函数用于获取进程相关的标识信息，常用于进程管理和调试。
+
+#### 示例代码
 
 ```c
 #include <stdio.h>
@@ -691,10 +715,13 @@ pid_t getpgid(pid_t pid); // 获取指定进程的进程组号
 #include <unistd.h>
 
 int main() {
-    printf("pid = %d\n", getpid());
-    printf("ppid = %d\n", getppid());
-    printf("pgid = %d\n", getpgid(getpid()));
-    while(1);
+    printf("当前进程号 (PID) = %d\n", getpid());
+    printf("父进程号 (PPID) = %d\n", getppid());
+    printf("进程组号 (PGID) = %d\n", getpgid(getpid()));
+    
+    while(1) {
+        sleep(1);
+    }
     return 0;
 }
 ```
@@ -713,13 +740,19 @@ int main() {
 
 **内存布局示意：**
 
-- 高地址
-    - 栈区
-    - 堆区
-    - BSS 区
-    - 数据区
-    - 代码区
-- 低地址
+```
+高地址
+    ↓
+  栈区 (Stack)
+  堆区 (Heap)
+  BSS 区
+  数据区 (Data)
+  代码区 (Text)
+    ↓
+低地址
+```
+
+---
 
 ## 六、进程创建与执行
 
@@ -736,68 +769,80 @@ int main() {
 ```c
 #include <sys/types.h>
 #include <unistd.h>
+
 pid_t fork(void);
 ```
 
-#### 返回值
-- 父进程中返回子进程的进程号（>0）
-- 子进程中返回0
-- 失败返回-1
+#### 参数说明
 
-#### 说明
-- fork 创建一个新的子进程，子进程是父进程的副本。
-- 父子进程拥有独立的地址空间，但初始内容相同（写时拷贝）。
+* **返回值**：
+  * 父进程中返回子进程的进程号（>0）
+  * 子进程中返回0
+  * 失败返回-1
 
-#### 重要示例：区分父子进程
+#### 使用场景
+
+`fork` 创建一个新的子进程，子进程是父进程的副本。父子进程拥有独立的地址空间，但初始内容相同（写时拷贝）。
+
+#### 示例代码
 
 ```c
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/types.h>
 #include <unistd.h>
-int main(){
+
+int main() {
     pid_t pid;
-    printf(" [%d]:Begin!\n",getpid());
+    printf("[%d]: Begin!\n", getpid());
+    
     pid = fork();
-    if(pid < 0){
+    if (pid < 0) {
         perror("fork 创建进程错误!");
         exit(1);
     }
-    if(pid == 0){
-        printf(" [%d]:子进程正在工作...\n",getpid());
-    }else{
+    
+    if (pid == 0) {
+        printf("[%d]: 子进程正在工作...\n", getpid());
+    } else {
         sleep(1);
-        printf(" [%d]:父进程正在工作...\n",getpid());
+        printf("[%d]: 父进程正在工作...\n", getpid());
     }
+    
     printf("[%d] End!\n", getpid());
     exit(0);
 }
 ```
 
-#### 重要示例：父子进程独立地址空间
+#### 父子进程独立地址空间示例
 
 ```c
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-int x = 10;
+
+int x = 10;  // 全局变量
+
 int main() {
-    static int y = 10;
-    int z = 10;
+    static int y = 10;  // 静态变量
+    int z = 10;         // 局部变量
+    
     pid_t pid = fork();
     if (pid < 0) {
         perror("创建进程失败");
         return -1;
     }
+    
     if (pid > 0) {
         printf("父进程....\n");
         x++; y++; z++;
-        printf("x =%d, y =%d, z =%d\n", x, y, z);
+        printf("x = %d, y = %d, z = %d\n", x, y, z);
     } else {
         sleep(1);
         printf("子进程...\n");
-        printf("x =%d, y =%d, z =%d\n", x, y, z);
+        printf("x = %d, y = %d, z = %d\n", x, y, z);
     }
+    
     while (1);
     return 0;
 }
@@ -812,42 +857,64 @@ int main() {
 ```c
 #include <sys/types.h>
 #include <unistd.h>
+
 pid_t vfork(void);
 ```
 
-#### 说明
-- vfork 创建子进程，但父子进程共享地址空间，直到子进程调用 exec 或 exit。
-- vfork 后父进程会被挂起，直到子进程退出。
+#### 参数说明
 
-#### 重要示例
+* **返回值**：
+  * 父进程中返回子进程的进程号（>0）
+  * 子进程中返回0
+  * 失败返回-1
+
+#### 使用场景
+
+`vfork` 创建子进程，但父子进程共享地址空间，直到子进程调用 exec 或 exit。vfork 后父进程会被挂起，直到子进程退出。
+
+#### 示例代码
 
 ```c
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/types.h>
 #include <unistd.h>
-int x=100;
-int main(){
-    static int y=200;
-    int z=300;
+
+int x = 100;
+
+int main() {
+    static int y = 200;
+    int z = 300;
+    
     pid_t pid = vfork();
-    if(pid<0){
+    if (pid < 0) {
         perror("创建进程失败!");
         return -1;
     }
-    if(pid>0){
+    
+    if (pid > 0) {
         printf("父进程正在运行中...\n");
-        printf("x==%d,y==%d,z==%d\n",x,y,z);
-    }else{
+        printf("x = %d, y = %d, z = %d\n", x, y, z);
+    } else {
         printf("子进程正在运行中...\n");
         x++; y++; z++;
-        printf("x==%d,y==%d,z==%d\n",x,y,z);
+        printf("x = %d, y = %d, z = %d\n", x, y, z);
         exit(0);
     }
-    while(1);
+    
+    while (1);
     return 0;
 }
 ```
+
+#### vfork 与 fork 的区别
+
+| 特性 | fork() | vfork() |
+|------|--------|---------|
+| 内存空间 | 子进程拥有父进程的完整拷贝（写时拷贝） | 子进程直接共享父进程的地址空间 |
+| 性能 | 开销较大，需要复制内存空间 | 性能更好，不需要复制内存空间 |
+| 执行顺序 | 父子进程独立执行，谁先执行取决于调度器 | 父进程被阻塞，直到子进程调用 exec() 或 exit() |
+| 应用场景 | 适合需要在父子进程中保持独立内存空间的情况 | 适合创建子进程后马上调用 exec() 执行新程序的场合 |
 
 ---
 
@@ -857,20 +924,27 @@ int main(){
 
 ```c
 #include <unistd.h>
+
 int execl(const char *path, const char *arg, ...);
 int execlp(const char *file, const char *arg, ...);
 int execv(const char *path, char *const argv[]);
 int execvp(const char *file, char *const argv[]);
-int execle(const char *path, const char *arg, ..., char * const envp[] );
+int execle(const char *path, const char *arg, ..., char * const envp[]);
 int execvpe(const char *file, char *const argv[], char *const envp[]);
 ```
 
-#### 说明
-- exec 系列函数用新程序替换当前进程映像，不会返回（除非出错）。
-- execl/execv 需要绝对路径，带 p 的可用相对路径。
-- e 变体可自定义环境变量。
+#### 参数说明
 
-#### 重要示例
+* `path/file`：可执行文件的路径或文件名。
+* `arg/argv`：传递给新程序的参数。
+* `envp`：环境变量数组（仅 e 变体）。
+* **返回值**：成功不返回，失败返回 -1 并设置 `errno`。
+
+#### 使用场景
+
+exec 系列函数用新程序替换当前进程映像，不会返回（除非出错）。execl/execv 需要绝对路径，带 p 的可用相对路径。e 变体可自定义环境变量。
+
+#### 示例代码
 
 ```c
 #include <stdio.h>
@@ -878,18 +952,19 @@ int execvpe(const char *file, char *const argv[], char *const envp[]);
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+
 int main() {
     pid_t pid = fork();
-    if(pid < 0) {
+    if (pid < 0) {
         perror("fail to fork");
         exit(1);
-    } else if(pid > 0) {
+    } else if (pid > 0) {
         printf("父进程在运行中\n");
         wait(NULL);
         printf("子进程运行结束\n");
     } else {
         printf("子进程运行中\n");
-        if(execl("/bin/ls", "ls", "-l", NULL) == -1) {
+        if (execl("/bin/ls", "ls", "-l", NULL) == -1) {
             perror("fail to execl");
             exit(1);
         }
@@ -897,6 +972,17 @@ int main() {
     return 0;
 }
 ```
+
+#### exec 函数族变体说明
+
+| 函数 | 参数传递方式 | 路径要求 | 环境变量 |
+|------|-------------|----------|----------|
+| execl | 列表形式 | 绝对路径 | 继承当前环境 |
+| execlp | 列表形式 | 相对路径 | 继承当前环境 |
+| execv | 数组形式 | 绝对路径 | 继承当前环境 |
+| execvp | 数组形式 | 相对路径 | 继承当前环境 |
+| execle | 列表形式 | 绝对路径 | 自定义环境 |
+| execvpe | 数组形式 | 相对路径 | 自定义环境 |
 
 ---
 
@@ -907,15 +993,30 @@ int main() {
 ```c
 #include <sys/types.h>
 #include <sys/wait.h>
+
 pid_t wait(int *status);
 pid_t waitpid(pid_t pid, int *status, int options);
 ```
 
-#### 说明
-- wait 等待任一子进程结束，waitpid 可指定等待的子进程。
-- status 可获取子进程退出状态。
+#### 参数说明
 
-#### 重要示例
+* `pid`：指定的进程或进程组（仅 waitpid）。
+  * `pid > 0`：等待进程 ID 等于 pid 的子进程。
+  * `pid = 0`：等待同一个进程组中的任何子进程。
+  * `pid = -1`：等待任一子进程，此时 waitpid 和 wait 作用一样。
+  * `pid < -1`：等待指定进程组中的任何子进程，这个进程组的 ID 等于 pid 的绝对值。
+* `status`：保存子进程退出时的状态信息。
+* `options`：选项。
+  * `0`：同 wait，阻塞父进程，等待子进程退出。
+  * `WNOHANG`：没有任何已经结束的子进程，则立即返回。非阻塞形式。
+  * `WUNTRACED`：如果子进程暂停了则此函数马上返回，并且不予以理会子进程的结束状态。
+* **返回值**：成功返回状态改变了的子进程的进程号，失败返回 -1。
+
+#### 使用场景
+
+wait 等待任一子进程结束，waitpid 可指定等待的子进程。status 可获取子进程退出状态。
+
+#### 示例代码
 
 ```c
 #include <stdio.h>
@@ -923,14 +1024,16 @@ pid_t waitpid(pid_t pid, int *status, int options);
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+
 int main() {
     pid_t pid = fork();
-    if(pid < 0) {
+    if (pid < 0) {
         perror("进程创建失败");
         return -1;
     }
-    if(pid == 0) {
-        for(int i = 0; i < 3; i++) {
+    
+    if (pid == 0) {
+        for (int i = 0; i < 3; i++) {
             printf("子进程\n");
             sleep(1);
         }
@@ -938,7 +1041,7 @@ int main() {
     } else {
         int status = 0;
         wait(&status);
-        if(WIFEXITED(status) != 0) {
+        if (WIFEXITED(status) != 0) {
             printf("子进程返回状态: %d\n", WEXITSTATUS(status));
         }
         printf("父进程\n");
@@ -946,6 +1049,11 @@ int main() {
     return 0;
 }
 ```
+
+#### 状态宏说明
+
+* `WIFEXITED(status)`：如果子进程正常终止，取出的字段值非零。
+* `WEXITSTATUS(status)`：返回子进程的退出状态，退出状态保存在 status 变量的 8~16 位。
 
 ---
 
@@ -956,13 +1064,39 @@ int main() {
 ```c
 #include <stdlib.h>
 void exit(int status);
+
 #include <unistd.h>
 void _exit(int status);
 ```
 
-#### 说明
-- exit 会刷新缓冲区，_exit 不会。
-- 一般推荐用 exit。
+#### 参数说明
+
+* `status`：退出状态，由父进程通过 wait 函数接收这个状态。一般失败退出设置为非 0，成功退出设置为 0。
+
+#### 使用场景
+
+exit 和 _exit 函数用于退出当前进程。exit 会刷新缓冲区，_exit 不会。一般推荐用 exit。
+
+#### 示例代码
+
+```c
+#include <stdio.h>
+#include <unistd.h>
+#include <stdlib.h>
+
+void fun() {
+    printf("BBB\n");
+    return;
+    printf("CCC\n");  // 不会执行
+}
+
+int main() {
+    printf("AAA\n");
+    fun();
+    printf("DDD\n");
+    return 0;
+}
+```
 
 ---
 
@@ -972,23 +1106,42 @@ void _exit(int status);
 
 ```c
 #include <stdlib.h>
+
 int system(const char *command);
 ```
 
-#### 说明
-- system 用于执行 shell 命令，会创建子进程并等待其结束。
+#### 参数说明
 
-#### 重要示例
+* `command`：要执行的命令的字符串。
+* **返回值**：
+  * 如果 command 为 NULL，则返回非 0，一般为 1。
+  * 如果 system() 在调用 /bin/sh 时失败则返回 127，其它失败原因返回 -1。
+
+#### 使用场景
+
+system 用于执行 shell 命令，会创建子进程并等待其结束。
+
+#### 示例代码
 
 ```c
 #include <stdio.h>
 #include <stdlib.h>
+
 int main() {
     system("clear");
     system("ls -l");
     return 0;
 }
 ```
+
+#### system 与 exec 的区别
+
+| 特性 | system() | exec() |
+|------|----------|--------|
+| 执行方式 | 调用 shell 执行命令，创建子进程 | 直接用新程序替换当前进程 |
+| 进程关系 | 创建子进程执行命令，父进程保持不变 | 不创建新进程，替换当前进程 |
+| 返回行为 | 执行完命令后返回，返回命令的退出状态 | 不会返回，除非发生错误 |
+| 使用场景 | 适合简单调用外部命令，父进程继续执行 | 适合完全替换当前进程执行另一个程序 |
 
 ---
 
@@ -998,25 +1151,35 @@ int main() {
 
 ```c
 #include <stdlib.h>
+
 int atexit(void (*function)(void));
 ```
 
-#### 说明
-- atexit 注册的函数会在进程正常结束前被调用。
+#### 参数说明
 
-#### 重要示例
+* `function`：进程结束前调用的函数入口地址。
+* **返回值**：成功返回 0，失败返回非 0。
+
+#### 使用场景
+
+atexit 注册的函数会在进程正常结束前被调用。一个进程中可以多次调用 atexit 函数注册清理函数。正常结束前调用函数的顺序和注册时的顺序相反。
+
+#### 示例代码
 
 ```c
 #include <stdio.h>
 #include <stdlib.h>
-void fun1(){ printf("clear fun1...\n"); }
-void fun2(){ printf("clear fun2...\n"); }
-void fun3(){ printf("clear fun3...\n"); }
-int main(){
+#include <unistd.h>
+
+void fun1() { printf("clear fun1...\n"); }
+void fun2() { printf("clear fun2...\n"); }
+void fun3() { printf("clear fun3...\n"); }
+
+int main() {
     atexit(fun1);
     atexit(fun2);
     atexit(fun3);
-    printf(" **** **** **** *****\n ");
+    printf("**** **** **** *****\n");
     sleep(3);
     return 0;
 }
@@ -1026,9 +1189,11 @@ int main(){
 
 ### 9. 僵尸进程与孤儿进程
 
-- **僵尸进程**：进程已经结束, 但进程的占用的资源未被回收, 这样的进程称为僵尸进程。父进程未调用 wait 或 waitpid 函数回收子进程的资源使子进程变为僵尸进程。
-- **孤儿进程**: 父进程运行结束, 但子进程未运行结束的子进程。
-- **守护进程**: 守护进程是个特殊的孤儿进程, 这种进程脱离终端, 在后台运行。
+* **僵尸进程**：进程已经结束，但进程的占用的资源未被回收，这样的进程称为僵尸进程。父进程未调用 wait 或 waitpid 函数回收子进程的资源使子进程变为僵尸进程。
+* **孤儿进程**：父进程运行结束，但子进程未运行结束的子进程。
+* **守护进程**：守护进程是个特殊的孤儿进程，这种进程脱离终端，在后台运行。
+
+---
 
 ## 七、进程属性
 
@@ -1053,6 +1218,11 @@ int setgid(gid_t gid);
 
 * `uid`：新设置的用户 ID。
 * `gid`：新设置的组 ID。
+* **返回值**：成功返回 0，失败返回 -1 并设置 `errno`。
+
+#### 使用场景
+
+这些函数用于改变进程的用户 ID 和组 ID，常用于权限管理。
 
 ---
 
@@ -1070,7 +1240,13 @@ int setpriority(int which, int who, int priority);
 
 #### 参数说明
 
-* `inc` / `priority`：进程优先级的增减或设置值。
+* `inc`：进程优先级的增减值。
+* `priority`：进程优先级的设置值。
+* **返回值**：成功返回 0，失败返回 -1 并设置 `errno`。
+
+#### 使用场景
+
+这些函数用于调整进程的优先级，nice 用于相对调整，setpriority 用于绝对设置。
 
 ---
 
