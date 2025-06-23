@@ -6,7 +6,7 @@
 #include <cstdlib>
 #include <ctime>
 
-const std::string LOG_DIR = "/tmp/myapp_logs/";
+const std::string LOG_DIR = std::string(std::getenv("HOME")) + "/study/StudyLinux/2_Linux_cmd_shell/1_basic_cmd/example_log/logs/";
 const std::vector<std::string> LEVELS = {"INFO", "WARNING", "ERROR"};
 const std::vector<std::string> MESSAGES = {
     "Initialization complete.",
@@ -50,7 +50,7 @@ int main() {
     int lines_per_file = 100;  // 每个文件的日志行数
 
     // 创建目录（完全限定）
-    std::filesystem::create_directories(LOG_DIR);
+    std::filesystem::create_directories(LOG_DIR); //属于c++17 编译时要指定-std=c++17
 
     for (int i = 1; i <= file_count; ++i) {
         std::string filepath = LOG_DIR + "log" + std::to_string(i) + ".log";
