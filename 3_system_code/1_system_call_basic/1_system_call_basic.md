@@ -69,6 +69,7 @@ long syscall(long number, ...);
 #include <stdio.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <sys/syscall.h> //SYS_open定义文件
 
 int main() {
     int fd = syscall(SYS_open, "test.txt", O_RDONLY);
